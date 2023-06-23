@@ -7,17 +7,28 @@ defmodule UnkeyElixirSdk do
 
   # Client
 
-  def start_link(default) when is_binary(default) do
+  def start_link(default) when is_map(default) do
     :ets.new(:pid_store, [:set, :public, :named_table])
+
+    if map_size(default) === 0 do
+      handle_error(
+        "You need to specify at least the token in either the supervisor or via the start_link function i.e. start_link(%{token: 'mytoken'})"
+      )
+    end
 
     {:ok, pid} = GenServer.start_link(__MODULE__, default)
     # save the PID to a store so the user does not need to alwayd supply it
     :ets.insert(:pid_store, {"pid", pid})
+
     {:ok, pid}
   end
 
-  def pop() do
-    [{_m, pid}] = :ets.lookup(:user_lookup, "pid")
+  def create_key(opts) when is_map(opts) do
+    if(is_nil(Map.get(opts, :apiId))) do
+      handle_error("You need to specify at least the apiId in the form %{apiId: 'yourapiId'}")
+    end
+
+    [{_m, pid}] = :ets.lookup(:pid_store, "pid")
     GenServer.call(pid, :pop)
   end
 
@@ -25,8 +36,35 @@ defmodule UnkeyElixirSdk do
 
   @impl true
   def init(elements) do
-    initial_state = String.split(elements, ",", trim: true)
-    {:ok, initial_state}
+    case Map.get(elements, :base_url) do
+      nil ->
+        token = Map.get(elements, :token)
+
+        base_url = "https://api.unkey.dev/v1/keys"
+
+        :ets.new(:token_store, [:set, :public, :named_table])
+
+        :ets.new(:base_url_store, [:set, :public, :named_table])
+
+        :ets.insert(:token_store, {"token", token})
+
+        :ets.insert(:base_url_store, {"base_url", base_url})
+
+      _ ->
+        token = Map.get(elements, :token)
+
+        base_url = Map.get(elements, :base_url)
+
+        :ets.new(:token_store, [:set, :public, :named_table])
+
+        :ets.new(:base_url_store, [:set, :public, :named_table])
+
+        :ets.insert(:token_store, {"token", token})
+
+        :ets.insert(:base_url_store, {"base_url", base_url})
+    end
+
+    {:ok, elements}
   end
 
   @impl true
@@ -35,9 +73,16 @@ defmodule UnkeyElixirSdk do
     {:reply, to_caller, new_state}
   end
 
-  @impl true
-  def handle_cast({:push, element}, state) do
-    new_state = [element | state]
-    {:noreply, new_state}
+  defp handle_error(error_message) when is_binary(error_message) do
+    try do
+      throw(error_message)
+    catch
+      err ->
+        log_error("Error Message #{err}")
+    end
+  end
+
+  defp log_error(input) when is_binary(input) do
+    IO.puts(input)
   end
 end
