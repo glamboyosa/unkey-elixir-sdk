@@ -38,33 +38,15 @@ defmodule UnkeyElixirSdk do
   def init(elements) do
     case Map.get(elements, :base_url) do
       nil ->
-        token = Map.get(elements, :token)
-
         base_url = "https://api.unkey.dev/v1/keys"
 
-        :ets.new(:token_store, [:set, :public, :named_table])
+        Map.put(elements, :base_url, base_url)
 
-        :ets.new(:base_url_store, [:set, :public, :named_table])
-
-        :ets.insert(:token_store, {"token", token})
-
-        :ets.insert(:base_url_store, {"base_url", base_url})
+        {:ok, elements}
 
       _ ->
-        token = Map.get(elements, :token)
-
-        base_url = Map.get(elements, :base_url)
-
-        :ets.new(:token_store, [:set, :public, :named_table])
-
-        :ets.new(:base_url_store, [:set, :public, :named_table])
-
-        :ets.insert(:token_store, {"token", token})
-
-        :ets.insert(:base_url_store, {"base_url", base_url})
+        {:ok, elements}
     end
-
-    {:ok, elements}
   end
 
   @impl true
