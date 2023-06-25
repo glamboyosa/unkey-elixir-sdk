@@ -1,5 +1,7 @@
 defmodule UnkeyElixirSdk do
   use GenServer
+  alias HTTPoison
+  alias Jason
 
   @moduledoc """
   Documentation for `UnkeyElixirSdk`.
@@ -29,7 +31,7 @@ defmodule UnkeyElixirSdk do
     end
 
     [{_m, pid}] = :ets.lookup(:pid_store, "pid")
-    GenServer.call(pid, :pop)
+    GenServer.call(pid, {:create_key, opts})
   end
 
   # Server (callbacks)
@@ -50,9 +52,26 @@ defmodule UnkeyElixirSdk do
   end
 
   @impl true
-  def handle_call(:pop, _from, state) do
-    [to_caller | new_state] = state
-    {:reply, to_caller, new_state}
+  def handle_call({:create_key, opts}, _from, state) do
+    body = opts |> Jason.encode!()
+
+    case HTTPoison.post(state.base_url, body, headers(state.token)) do
+      {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
+        IO.puts(body)
+        {:reply, Jason.decode!(body), state}
+
+      {:ok, %HTTPoison.Response{status_code: 404}} ->
+        handle_error("Not found :(")
+
+      {:ok, %HTTPoison.Response{status_code: 401}} ->
+        handle_error("Not found :(")
+
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        IO.inspect(reason)
+        handle_error(to_string(reason))
+    end
+
+    {:no_reply, state}
   end
 
   defp handle_error(error_message) when is_binary(error_message) do
@@ -66,5 +85,9 @@ defmodule UnkeyElixirSdk do
 
   defp log_error(input) when is_binary(input) do
     IO.puts(input)
+  end
+
+  defp headers(token) do
+    [Authorization: "Bearer #{token}", Accept: "Application/json; Charset=utf-8"]
   end
 end
