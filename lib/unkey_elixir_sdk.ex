@@ -59,7 +59,7 @@ defmodule UnkeyElixirSdk do
 
   @spec create_key(map) :: map()
   def create_key(opts) when is_map(opts) do
-    if(is_nil(Map.get(opts, :apiId))) do
+    if(is_nil(Map.get(opts, "apiId"))) do
       handle_error("You need to specify at least the apiId in the form %{apiId: 'yourapiId'}")
     end
 
@@ -109,15 +109,22 @@ defmodule UnkeyElixirSdk do
 
   @impl true
   def init(elements) do
+    IO.puts("SOMETHING")
+
     case Map.get(elements, :base_url) do
       nil ->
+        IO.puts("NIL?")
         base_url = "https://api.unkey.dev/v1/keys"
 
-        Map.put(elements, :base_url, base_url)
+        elements = Map.put(elements, :base_url, base_url)
 
         {:ok, elements}
 
       _ ->
+        base_url = "https://api.unkey.dev/v1/keys"
+
+        elements = Map.put_new(elements, :base_url, base_url)
+
         {:ok, elements}
     end
   end
@@ -134,12 +141,15 @@ defmodule UnkeyElixirSdk do
       {:ok, %HTTPoison.Response{status_code: 404}} ->
         handle_error("Not found :(")
 
-      {:ok, %HTTPoison.Response{status_code: 401}} ->
-        handle_error("Not found :(")
+        {:ok, %HTTPoison.Response{status_code: 401}} ->
+          handle_error("Unauthorised")
 
-      {:error, %HTTPoison.Error{reason: reason}} ->
-        IO.inspect(reason)
-        handle_error(to_string(reason))
+        {:error, %HTTPoison.Error{reason: reason}} ->
+          IO.inspect(reason)
+          handle_error(to_string(reason))
+
+        _ ->
+          handle_error(to_string("Something went wrong"))
     end
 
     {:noreply, state}
@@ -155,11 +165,14 @@ defmodule UnkeyElixirSdk do
         handle_error("Not found :(")
 
       {:ok, %HTTPoison.Response{status_code: 401}} ->
-        handle_error("Not found :(")
+        handle_error("Unauthorised")
 
       {:error, %HTTPoison.Error{reason: reason}} ->
         IO.inspect(reason)
         handle_error(to_string(reason))
+
+      _ ->
+        handle_error(to_string("Something went wrong"))
     end
 
     {:noreply, state}
@@ -179,12 +192,15 @@ defmodule UnkeyElixirSdk do
       {:ok, %HTTPoison.Response{status_code: 404}} ->
         handle_error("Not found :(")
 
-      {:ok, %HTTPoison.Response{status_code: 401}} ->
-        handle_error("Not found :(")
+        {:ok, %HTTPoison.Response{status_code: 401}} ->
+          handle_error("Unauthorised")
 
-      {:error, %HTTPoison.Error{reason: reason}} ->
-        IO.inspect(reason)
-        handle_error(to_string(reason))
+        {:error, %HTTPoison.Error{reason: reason}} ->
+          IO.inspect(reason)
+          handle_error(to_string(reason))
+
+        _ ->
+          handle_error(to_string("Something went wrong"))
     end
 
     {:noreply, state}
@@ -204,6 +220,6 @@ defmodule UnkeyElixirSdk do
   end
 
   defp headers(token) do
-    [Authorization: "Bearer #{token}", Accept: "Application/json; Charset=utf-8"]
+    [{"Authorization", "Bearer #{token}"}, {"Content-Type", "application/json; charset=UTF-8"}]
   end
 end
