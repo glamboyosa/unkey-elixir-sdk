@@ -29,16 +29,14 @@ defmodule UnkeyElixirSdk do
   Creates an  API key for your users
 
   Returns a map with the key
+  `%{"keyId" => "key_cm9vdCBvZiBnb29kXa", "key" => "xyz_AS5HDkXXPot2MMoPHD8jnL"}`
 
-  {
-  "key": "xyz_AS5HDkXXPot2MMoPHD8jnL"
-  }
 
   ## Examples
       iex> UnkeyElixirSdk.create_key(%{"apiId" => "myapiid"})
-      %{"key" => "xyz_AS5HDkXXPot2MMoPHD8jnL"}
+        %{"keyId" => "key_cm9vdCBvZiBnb29kXa", "key" => "xyz_AS5HDkXXPot2MMoPHD8jnL"}
 
-     iex>  UnkeyElixirSdk.create_key(%{
+     iex>  `UnkeyElixirSdk.create_key(%{
     "apiId" => "myapiid",
     "prefix" => "xyz",
     "byteLength" => 16,
@@ -53,9 +51,9 @@ defmodule UnkeyElixirSdk do
       "refillRate" => 1,
       "refillInterval" => 1000
     }
-  })
+  })`
 
-      %{"key" => "xyz_AS5HDkXXPot2MMoPHD8jnL"}
+      %{"keyId" => "key_cm9vdCBvZiBnb29kXa", "key" => "xyz_AS5HDkXXPot2MMoPHD8jnL"}
 
   """
 
@@ -77,17 +75,34 @@ defmodule UnkeyElixirSdk do
   ## Examples
       iex> UnkeyElixirSdk.verify_key("xyz_AS5HDkXXPot2MMoPHD8jnL")
 
-   %{"valid" => true,
+   `%{"valid" => true,
     "ownerId" => "chronark",
     "meta" => %{
       "hello" => "world"
-    }}
+    }}`
   """
 
   @spec verify_key(binary) :: map()
   def verify_key(key) when is_binary(key) do
     [{_m, pid}] = :ets.lookup(:pid_store, "pid")
     GenServer.call(pid, {:verify_key, key})
+  end
+
+  @doc """
+  Delete an api key for your users
+
+  Returns  :ok
+
+  ## Examples
+      iex> UnkeyElixirSdk.revoke_key("key_cm9vdCBvZiBnb29kXa")
+
+   :ok
+  """
+
+  @spec revoke_key(binary) :: :ok
+  def revoke_key(key) when is_binary(key) do
+    [{_m, pid}] = :ets.lookup(:pid_store, "pid")
+    GenServer.call(pid, {:revoke_key, key})
   end
 
   # Server (callbacks)
@@ -115,6 +130,26 @@ defmodule UnkeyElixirSdk do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         IO.puts(body)
         {:reply, Jason.decode!(body), state}
+
+      {:ok, %HTTPoison.Response{status_code: 404}} ->
+        handle_error("Not found :(")
+
+      {:ok, %HTTPoison.Response{status_code: 401}} ->
+        handle_error("Not found :(")
+
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        IO.inspect(reason)
+        handle_error(to_string(reason))
+    end
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_call({:revoke_key, key_id}, _from, state) do
+    case HTTPoison.delete("#{state.base_url}/#{key_id}", headers(state.token)) do
+      {:ok, %HTTPoison.Response{status_code: 202}} ->
+        {:reply, :ok, state}
 
       {:ok, %HTTPoison.Response{status_code: 404}} ->
         handle_error("Not found :(")
