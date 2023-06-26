@@ -25,6 +25,28 @@ defmodule UnkeyElixirSdk do
     {:ok, pid}
   end
 
+  @doc """
+  Creates an  API key for your users
+
+  Returns a map with the key
+
+  {
+  "key": "xyz_AS5HDkXXPot2MMoPHD8jnL"
+  }
+
+  ## Examples
+
+
+  ### Example with required property only
+
+      iex> UnkeyElixirSdk.create_key(%{"apiId" => "myapiid"})
+
+      %{"key" => "xyz_AS5HDkXXPot2MMoPHD8jnL"}
+
+  """
+
+
+  @spec create_key(map) :: map()
   def create_key(opts) when is_map(opts) do
     if(is_nil(Map.get(opts, :apiId))) do
       handle_error("You need to specify at least the apiId in the form %{apiId: 'yourapiId'}")
@@ -71,7 +93,7 @@ defmodule UnkeyElixirSdk do
         handle_error(to_string(reason))
     end
 
-    {:no_reply, state}
+    {:noreply, state}
   end
 
   defp handle_error(error_message) when is_binary(error_message) do
