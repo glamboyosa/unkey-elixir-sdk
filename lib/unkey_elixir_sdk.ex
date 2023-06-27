@@ -122,11 +122,8 @@ defmodule UnkeyElixirSdk do
 
   @impl true
   def init(elements) do
-    IO.puts("SOMETHING")
-
     case Map.get(elements, :base_url) do
       nil ->
-        IO.puts("NIL?")
         base_url = "https://api.unkey.dev/v1/keys"
 
         elements = Map.put(elements, :base_url, base_url)
