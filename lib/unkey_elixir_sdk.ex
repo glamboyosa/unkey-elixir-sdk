@@ -81,7 +81,7 @@ defmodule UnkeyElixirSdk do
   end
 
   @doc """
-  Verify a key from your users. Notice how this endpoint does not require an Unkey api key. You only need to send the api key from your user.
+  Verify a key from your users.  You only need to send the api key from your user.
 
   Returns a map with whether the key is valid or not. Optionally sends `ownerId` and `meta`
 
