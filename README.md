@@ -27,7 +27,7 @@ The GenServer takes a map with two properties.
 
 ```elixir
 children = [
-  # The Counter is a child started via Counter.start_link(0)
+
   %{
     id: UnkeyElixirSdk,
     start: {UnkeyElixirSdk, :start_link, [%{token: "yourunkeyapitoken"}]}
