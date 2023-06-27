@@ -11,7 +11,7 @@ defmodule UnkeyElixirSdk.MixProject do
       description: description(),
       # Docs
       name: "UnkeyElixirSdk",
-      source_url: "https://github.com/glamboyosa/unkeyelixirsdk",
+      source_url: "https://github.com/glamboyosa/unkey-elixir-sdk",
       # The main page in the docs
       main: "UnkeyElixirSdk",
       homepage_url: "https://hexdocs.pm/unkey_elixir_sdk",
