@@ -55,7 +55,7 @@ defmodule UnkeyElixirSdk do
     "byteLength" => 16,
     "ownerId" => "glamboyosa",
     "meta" => %{
-      hello: "world"
+      "hello" => "world"
     },
     "expires" => 1_686_941_966_471,
     "ratelimit" => %{

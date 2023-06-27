@@ -61,7 +61,7 @@ Returns a map with the `key` and `keyId`.
 
 ```elixir
  UnkeyElixirSdk.create_key(%{"apiId" => "myapiid"})
-
+  # returns
    %{"keyId" => "key_cm9vdCBvZiBnb29kXa", "key" => "xyz_AS5HDkXXPot2MMoPHD8jnL"}
 ```
 
@@ -72,7 +72,7 @@ UnkeyElixirSdk.create_key(%{
 "byteLength" => 16,
 "ownerId" => "glamboyosa",
 "meta" => %{
-hello: "world"
+"hello" => "world"
 },
 "expires" => 1_686_941_966_471,
 "ratelimit" => %{
@@ -83,6 +83,7 @@ hello: "world"
 }
 
 })
+# returns
 %{"keyId" => "key_cm9vdCBvZiBnb29kXa", "key" => "xyz_AS5HDkXXPot2MMoPHD8jnL"}
 ```
 
@@ -96,7 +97,7 @@ Returns a map with whether the key is valid or not. Optionally sends `ownerId` a
 
 ```elixir
  UnkeyElixirSdk.verify_key("xyz_AS5HDkXXPot2MMoPHD8jnL")
-
+  # returns
   %{"valid" => true,
     "ownerId" => "chronark",
     "meta" => %{
@@ -114,7 +115,7 @@ Returns `:ok`
 
 ```elixir
 UnkeyElixirSdk.revoke_key("key_cm9vdCBvZiBnb29kXa")
-
+# returns
 :ok
 ```
 
