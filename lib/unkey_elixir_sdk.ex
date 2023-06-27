@@ -8,7 +8,20 @@ defmodule UnkeyElixirSdk do
   """
 
   # Client
+  @doc """
+  Start the GenServer
+  Returns {:ok, pid}
 
+  ## Examples
+      iex> UnkeyElixirSdk.start_link(%{token: "yourtoken"})
+   `{:ok, pid}`
+
+    iex> UnkeyElixirSdk.start_link(%{token: "yourtoken", base_url: "theunkeybaseurl"})
+
+
+  `{:ok, pid}`
+  """
+  @spec start_link(map) :: {:ok, pid}
   def start_link(default) when is_map(default) do
     :ets.new(:pid_store, [:set, :public, :named_table])
 
@@ -141,15 +154,15 @@ defmodule UnkeyElixirSdk do
       {:ok, %HTTPoison.Response{status_code: 404}} ->
         handle_error("Not found :(")
 
-        {:ok, %HTTPoison.Response{status_code: 401}} ->
-          handle_error("Unauthorised")
+      {:ok, %HTTPoison.Response{status_code: 401}} ->
+        handle_error("Unauthorised")
 
-        {:error, %HTTPoison.Error{reason: reason}} ->
-          IO.inspect(reason)
-          handle_error(to_string(reason))
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        IO.inspect(reason)
+        handle_error(to_string(reason))
 
-        _ ->
-          handle_error(to_string("Something went wrong"))
+      _ ->
+        handle_error(to_string("Something went wrong"))
     end
 
     {:noreply, state}
@@ -192,15 +205,15 @@ defmodule UnkeyElixirSdk do
       {:ok, %HTTPoison.Response{status_code: 404}} ->
         handle_error("Not found :(")
 
-        {:ok, %HTTPoison.Response{status_code: 401}} ->
-          handle_error("Unauthorised")
+      {:ok, %HTTPoison.Response{status_code: 401}} ->
+        handle_error("Unauthorised")
 
-        {:error, %HTTPoison.Error{reason: reason}} ->
-          IO.inspect(reason)
-          handle_error(to_string(reason))
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        IO.inspect(reason)
+        handle_error(to_string(reason))
 
-        _ ->
-          handle_error(to_string("Something went wrong"))
+      _ ->
+        handle_error(to_string("Something went wrong"))
     end
 
     {:noreply, state}
