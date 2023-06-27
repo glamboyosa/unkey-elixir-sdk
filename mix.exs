@@ -8,15 +8,17 @@ defmodule UnkeyElixirSdk.MixProject do
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      description: description(),
       # Docs
-      name: "UnkeyElixirSDK",
+      name: "UnkeyElixirSdk",
       source_url: "https://github.com/glamboyosa/unkeyelixirsdk",
       # The main page in the docs
-      main: "MyApp",
+      main: "UnkeyElixirSdk",
       homepage_url: "https://hexdocs.pm/unkey_elixir_sdk",
       docs: [
         # The main page in the docs
-        main: "UnkeyElixirSDK"
+        main: "UnkeyElixirSdk",
+        extras: ["README.md"]
       ]
     ]
   end
@@ -26,6 +28,10 @@ defmodule UnkeyElixirSdk.MixProject do
     [
       extra_applications: [:logger]
     ]
+  end
+
+  defp description() do
+    "Unkey.dev Elixir SDK for interacting with the platform programatically."
   end
 
   # Run "mix help deps" to learn about dependencies.

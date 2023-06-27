@@ -1,10 +1,12 @@
 # UnkeyElixirSdk
 
-[Unkey.dev](https://unkey.dev) Elixir Sdk for interacting with the platform programatically.
+[Unkey.dev](https://unkey.dev) Elixir SDK for interacting with the platform programatically.
 
 ## Installation
 
 The package can be installed from Hex PM by adding `unkey_elixir_sdk` to your list of dependencies in `mix.exs`:
+
+> Note: This project uses Elixir version `1.13`.
 
 ```elixir
 def deps do
