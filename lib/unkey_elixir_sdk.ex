@@ -145,7 +145,6 @@ defmodule UnkeyElixirSdk do
 
     case HTTPoison.post(state.base_url, body, headers(state.token)) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
-        IO.puts(body)
         {:reply, Jason.decode!(body), state}
 
       {:ok, %HTTPoison.Response{status_code: 404}} ->
@@ -196,7 +195,6 @@ defmodule UnkeyElixirSdk do
 
     case HTTPoison.post("#{state.base_url}/verify", body, headers(state.token)) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
-        IO.puts(body)
         {:reply, Jason.decode!(body), state}
 
       {:ok, %HTTPoison.Response{status_code: 404}} ->
