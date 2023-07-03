@@ -1,5 +1,6 @@
 defmodule UnkeyElixirSdk do
   use GenServer
+  require Logger
   alias HTTPoison
   alias Jason
 
@@ -14,7 +15,7 @@ defmodule UnkeyElixirSdk do
 
   ## Examples
       iex> UnkeyElixirSdk.start_link(%{token: "yourtoken"})
-   `{:ok, pid}`
+      `{:ok, pid}`
 
     iex> UnkeyElixirSdk.start_link(%{token: "yourtoken", base_url: "theunkeybaseurl"})
 
@@ -47,26 +48,26 @@ defmodule UnkeyElixirSdk do
 
   ## Examples
       iex> UnkeyElixirSdk.create_key(%{"apiId" => "myapiid"})
-        %{"keyId" => "key_cm9vdCBvZiBnb29kXa", "key" => "xyz_AS5HDkXXPot2MMoPHD8jnL"}
+      %{"keyId" => "key_cm9vdCBvZiBnb29kXa", "key" => "xyz_AS5HDkXXPot2MMoPHD8jnL"}
 
      iex>  `UnkeyElixirSdk.create_key(%{
-    "apiId" => "myapiid",
-    "prefix" => "xyz",
-    "byteLength" => 16,
-    "ownerId" => "glamboyosa",
-    "meta" => %{
+     "apiId" => "myapiid",
+     "prefix" => "xyz",
+     "byteLength" => 16,
+     "ownerId" => "glamboyosa",
+     "meta" => %{
       "hello" => "world"
-    },
-    "expires" => 1_686_941_966_471,
-    "ratelimit" => %{
-      "type" => "fast",
-      "limit" => 10,
-      "refillRate" => 1,
-      "refillInterval" => 1000
-    }
+     },
+     "expires" => 1_686_941_966_471,
+     "ratelimit" => %{
+     "type" => "fast",
+     "limit" => 10,
+     "refillRate" => 1,
+     "refillInterval" => 1000
+     }
   })`
 
-      %{"keyId" => "key_cm9vdCBvZiBnb29kXa", "key" => "xyz_AS5HDkXXPot2MMoPHD8jnL"}
+    %{"keyId" => "key_cm9vdCBvZiBnb29kXa", "key" => "xyz_AS5HDkXXPot2MMoPHD8jnL"}
 
   """
 
@@ -77,7 +78,7 @@ defmodule UnkeyElixirSdk do
     end
 
     [{_m, pid}] = :ets.lookup(:pid_store, "pid")
-    GenServer.call(pid, {:create_key, opts})
+    GenServer.call(pid, {:create_key, opts}, 6000)
   end
 
   @doc """
@@ -88,17 +89,17 @@ defmodule UnkeyElixirSdk do
   ## Examples
       iex> UnkeyElixirSdk.verify_key("xyz_AS5HDkXXPot2MMoPHD8jnL")
 
-   `%{"valid" => true,
-    "ownerId" => "chronark",
-    "meta" => %{
+      `%{"valid" => true,
+       "ownerId" => "chronark",
+      "meta" => %{
       "hello" => "world"
-    }}`
+      }}`
   """
 
   @spec verify_key(binary) :: map()
   def verify_key(key) when is_binary(key) do
     [{_m, pid}] = :ets.lookup(:pid_store, "pid")
-    GenServer.call(pid, {:verify_key, key})
+    GenServer.call(pid, {:verify_key, key}, :infinity)
   end
 
   @doc """
@@ -109,13 +110,13 @@ defmodule UnkeyElixirSdk do
   ## Examples
       iex> UnkeyElixirSdk.revoke_key("key_cm9vdCBvZiBnb29kXa")
 
-   :ok
+      :ok
   """
 
   @spec revoke_key(binary) :: :ok
   def revoke_key(key) when is_binary(key) do
     [{_m, pid}] = :ets.lookup(:pid_store, "pid")
-    GenServer.call(pid, {:revoke_key, key})
+    GenServer.call(pid, {:revoke_key, key}, :infinity)
   end
 
   # Server (callbacks)
@@ -145,7 +146,7 @@ defmodule UnkeyElixirSdk do
 
     case HTTPoison.post(state.base_url, body, headers(state.token)) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
-        {:reply, Jason.decode!(body), state}
+        {:reply, Map.new(Jason.decode!(body)), state}
 
       {:ok, %HTTPoison.Response{status_code: 404}} ->
         handle_error("Not found :(")
@@ -157,17 +158,18 @@ defmodule UnkeyElixirSdk do
         IO.inspect(reason)
         handle_error(to_string(reason))
 
+      {:ok, %HTTPoison.Response{body: body}} ->
+        handle_error(to_string(body))
+
       _ ->
         handle_error(to_string("Something went wrong"))
     end
-
-    {:noreply, state}
   end
 
   @impl true
   def handle_call({:revoke_key, key_id}, _from, state) do
     case HTTPoison.delete("#{state.base_url}/#{key_id}", headers(state.token)) do
-      {:ok, %HTTPoison.Response{status_code: 202}} ->
+      {:ok, %HTTPoison.Response{status_code: 200}} ->
         {:reply, :ok, state}
 
       {:ok, %HTTPoison.Response{status_code: 404}} ->
@@ -180,11 +182,12 @@ defmodule UnkeyElixirSdk do
         IO.inspect(reason)
         handle_error(to_string(reason))
 
+      {:ok, %HTTPoison.Response{body: body}} ->
+        handle_error(to_string(body))
+
       _ ->
         handle_error(to_string("Something went wrong"))
     end
-
-    {:noreply, state}
   end
 
   @impl true
@@ -207,11 +210,12 @@ defmodule UnkeyElixirSdk do
         IO.inspect(reason)
         handle_error(to_string(reason))
 
+      {:ok, %HTTPoison.Response{body: body}} ->
+        handle_error(to_string(body))
+
       _ ->
         handle_error(to_string("Something went wrong"))
     end
-
-    {:noreply, state}
   end
 
   defp handle_error(error_message) when is_binary(error_message) do
