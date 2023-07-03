@@ -19,7 +19,9 @@ defmodule UnkeyElixirSdk.MixProject do
         # The main page in the docs
         main: "UnkeyElixirSdk",
         extras: ["README.md"]
-      ]
+      ],
+      licenses: ["Apache-2.0"],
+      links: %{"GitHub" => "https://github.com/glamboyosa/unkey-elixir-sdk"}
     ]
   end
 
