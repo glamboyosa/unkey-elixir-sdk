@@ -4,7 +4,7 @@ defmodule UnkeyElixirSdk.MixProject do
   def project do
     [
       app: :unkey_elixir_sdk,
-      version: "0.1.0",
+      version: "0.1.1",
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -35,9 +35,7 @@ defmodule UnkeyElixirSdk.MixProject do
     [
       # This option is only needed when you don't want to use the OTP application name
       name: "unkey_elixir_sdk",
-      # These are the default files included in the package
-      files: ~w(lib .formatter.exs mix.exs README* LICENSE* ),
-      licenses: ["Apache-2.0"],
+      licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/glamboyosa/unkey-elixir-sdk"}
     ]
   end
