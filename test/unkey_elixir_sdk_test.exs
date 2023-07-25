@@ -7,7 +7,7 @@ defmodule UnkeyElixirSdkTest do
   test "Starts the GenServer Process successfully" do
     token = Application.get_env(:unkey_elixir_sdk, :token)
 
-    assert {:ok, pid} = UnkeyElixirSdk.start_link(%{token: token})
+    assert {:ok, _pid} = UnkeyElixirSdk.start_link(%{token: token})
   end
 
   describe "Unkey SDK Methods" do
@@ -74,6 +74,72 @@ defmodule UnkeyElixirSdkTest do
 
         assert is_map(opts)
         assert opts["valid"] == true
+      catch
+        err ->
+          Logger.error(err)
+      end
+    end
+
+    test "update_key/2", %{api_id: api_id} do
+      try do
+        opts =
+          UnkeyElixirSdk.create_key(%{
+            "apiId" => api_id,
+            "prefix" => "xyz",
+            "byteLength" => 16,
+            "ownerId" => "glamboyosa",
+            "meta" => %{"hello" => "world"},
+            "ratelimit" => %{
+              "type" => "fast",
+              "limit" => 10,
+              "refillRate" => 1,
+              "refillInterval" => 1000
+            }
+          })
+
+        assert is_map(opts)
+
+        assert :ok =
+                 UnkeyElixirSdk.update_key(opts["keyId"], %{
+                   "name" => "my_new_key",
+                   "ratelimit" => %{
+                     "type" => "fast",
+                     "limit" => 15,
+                     "refillRate" => 2,
+                     "refillInterval" => 500
+                   },
+                   "remaining" => 3
+                 })
+      catch
+        err ->
+          Logger.error(err)
+      end
+    end
+
+    test "update_key/2 with nil values", %{api_id: api_id} do
+      try do
+        opts =
+          UnkeyElixirSdk.create_key(%{
+            "apiId" => api_id,
+            "prefix" => "xyz",
+            "byteLength" => 16,
+            "ownerId" => "glamboyosa",
+            "meta" => %{"hello" => "world"},
+            "ratelimit" => %{
+              "type" => "fast",
+              "limit" => 10,
+              "refillRate" => 1,
+              "refillInterval" => 1000
+            }
+          })
+
+        assert is_map(opts)
+
+        assert :ok =
+                 UnkeyElixirSdk.update_key(opts["keyId"], %{
+                   "name" => nil,
+                   "ratelimit" => nil
+                 })
       catch
         err ->
           Logger.error(err)
