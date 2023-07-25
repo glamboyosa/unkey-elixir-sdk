@@ -101,6 +101,49 @@ Returns a map with whether the key is valid or not. Optionally sends `ownerId` a
     }}
 ```
 
+### update_key
+
+> @spec update_key(binary(), map()) :: :ok
+> Updates the configuration of a key
+
+Takes in a `key_id` argument and a map whose members are optional
+but must have at most 1 member present.
+
+```elixir
+%{
+  "name" => "my_new_key",
+  "ownerId" => "still_glamboyosa",
+   "meta" => %{
+    "hello" => "world"
+   },
+   "expires" => 1_686_941_966_471,
+   "ratelimit" => %{
+   "type" => "fast",
+   "limit" => 15,
+   "refillRate" => 2,
+   "refillInterval" => 500
+   },
+   "remaining" => 3
+}
+```
+
+Returns :ok
+
+```elixir
+UnkeyElixirSdk.update_key("key_cm9vdCBvZiBnb29kXa", %{
+"name" => "my_new_key",
+"ratelimit" => %{
+"type" => "fast",
+"limit" => 15,
+"refillRate" => 2,
+"refillInterval" => 500
+},
+"remaining" => 3
+})
+
+:ok
+```
+
 ### revoke_key
 
 > @spec revoke_key(binary) :: :ok
