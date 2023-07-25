@@ -64,7 +64,8 @@ defmodule UnkeyElixirSdk do
      "limit" => 10,
      "refillRate" => 1,
      "refillInterval" => 1000
-     }
+     },
+     "remaining" => 5
   })`
 
     %{"keyId" => "key_cm9vdCBvZiBnb29kXa", "key" => "xyz_AS5HDkXXPot2MMoPHD8jnL"}
@@ -119,6 +120,61 @@ defmodule UnkeyElixirSdk do
     GenServer.call(pid, {:revoke_key, key}, :infinity)
   end
 
+  @doc """
+  Updates the configuration of a key
+
+  Takes in a `key_id` argument and a map whose members are optional
+  but must have at most 1 member present.
+
+  ```
+  %{
+    "name" => "my_new_key",
+    "ownerId" => "still_glamboyosa",
+     "meta" => %{
+      "hello" => "world"
+     },
+     "expires" => 1_686_941_966_471,
+     "ratelimit" => %{
+     "type" => "fast",
+     "limit" => 15,
+     "refillRate" => 2,
+     "refillInterval" => 500
+     },
+     "remaining" => 3
+  }
+  ```
+
+  Returns  :ok
+
+  ## Examples
+
+  ```
+      iex> UnkeyElixirSdk.update_key("key_cm9vdCBvZiBnb29kXa", %{
+    "name" => "my_new_key",
+    "ownerId" => "still_glamboyosa",
+     "meta" => %{
+      "hello" => "world"
+     },
+     "expires" => 1_686_941_966_471,
+     "ratelimit" => %{
+     "type" => "fast",
+     "limit" => 15,
+     "refillRate" => 2,
+     "refillInterval" => 500
+     },
+     "remaining" => 3
+  })
+  ```
+
+      :ok
+  """
+
+  @spec update_key(binary(), map()) :: :ok
+  def update_key(key_id, opts) when is_map(opts) and is_binary(key_id) do
+    [{_m, pid}] = :ets.lookup(:pid_store, "pid")
+    GenServer.call(pid, {:update_key, key_id, opts}, :infinity)
+  end
+
   # Server (callbacks)
 
   @impl true
@@ -169,6 +225,43 @@ defmodule UnkeyElixirSdk do
   @impl true
   def handle_call({:revoke_key, key_id}, _from, state) do
     case HTTPoison.delete("#{state.base_url}/#{key_id}", headers(state.token)) do
+      {:ok, %HTTPoison.Response{status_code: 200}} ->
+        {:reply, :ok, state}
+
+      {:ok, %HTTPoison.Response{status_code: 404}} ->
+        handle_error("Not found :(")
+
+      {:ok, %HTTPoison.Response{status_code: 401}} ->
+        handle_error("Unauthorised")
+
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        IO.inspect(reason)
+        handle_error(to_string(reason))
+
+      {:ok, %HTTPoison.Response{body: body}} ->
+        handle_error(to_string(body))
+
+      _ ->
+        handle_error(to_string("Something went wrong"))
+    end
+  end
+
+  @impl true
+  def handle_call({:update_key, key_id, opts}, _from, state) do
+    body =
+      %{
+        "name" => :undefined,
+        "ownerId" => :undefined,
+        "meta" => :undefined,
+        "expires" => :undefined,
+        "ratelimit" => :undefined,
+        "remaining" => :undefined
+      }
+      |> Map.merge(opts)
+      |> Map.filter(&(elem(&1, 1) !== :undefined))
+      |> Jason.encode!()
+
+    case HTTPoison.put("#{state.base_url}/#{key_id}", body, headers(state.token)) do
       {:ok, %HTTPoison.Response{status_code: 200}} ->
         {:reply, :ok, state}
 

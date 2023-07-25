@@ -76,8 +76,8 @@ UnkeyElixirSdk.create_key(%{
 "limit" => 10,
 "refillRate" => 1,
 "refillInterval" => 1000
-}
-
+},
+"remaining" => 5
 })
 # returns
 %{"keyId" => "key_cm9vdCBvZiBnb29kXa", "key" => "xyz_AS5HDkXXPot2MMoPHD8jnL"}
