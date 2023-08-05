@@ -10,6 +10,18 @@ defmodule UnkeyElixirSdkTest do
     assert {:ok, _pid} = UnkeyElixirSdk.start_link(%{token: token})
   end
 
+  test "version in README matches mix.exs" do
+    readme_md = File.read!(Path.join(__DIR__, "../README.md"))
+
+    mix_config = Mix.Project.config()
+
+    version = mix_config[:version]
+
+    assert version == "0.1.2"
+
+    assert readme_md =~ ~s({:unkey_elixir_sdk, "~> #{version}"})
+  end
+
   describe "Unkey SDK Methods" do
     setup %{} do
       token = Application.get_env(:unkey_elixir_sdk, :token)
