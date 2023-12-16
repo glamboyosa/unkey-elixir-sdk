@@ -164,16 +164,7 @@ UnkeyElixirSdk.update_key("key_cm9vdCBvZiBnb29kXa", %{
 
 ### update_remaining
 
-```elixir
-@type key_update() ::
-  %{
-    "keyId" => String.t(),
-    "op" => "increment" | "decrement" | "set",
-    "value" => integer() | nil
-  }
-```
-
-> @spec update_remaining(key_update()) :: :ok
+> @spec update_remaining(map()) :: :ok
 
 Updates the `remaining` value for a specified key.
 Takes in a map of the shape:
