@@ -11,7 +11,7 @@ The package can be installed from Hex PM by adding `unkey_elixir_sdk` to your li
 ```elixir
 def deps do
   [
-    {:unkey_elixir_sdk, "~> 0.1.2"}
+    {:unkey_elixir_sdk, "~> 0.2.0"}
   ]
 end
 ```
@@ -44,6 +44,14 @@ You can also call the `start_link` function instead.
 ```elixir
 {:ok, _pid} = UnkeyElixirSdk.start_link(%{token: "yourunkeyapitoken", base_url: "https://api.unkey.dev/v1/keys"})
 ```
+
+## Breaking Changes
+
+### Version 0.2.0
+
+**Change**: The ` revoke_key` function has been renamed to `delete_key`.
+The delete_key function now performs the same operation as `revoke_key`.
+Update your code to replace calls to `revoke_key`with`delete_key`.
 
 ## Functions
 
@@ -87,12 +95,22 @@ UnkeyElixirSdk.create_key(%{
 
 > @spec verify_key(binary) :: map()
 
-Verify a key from your users. You only need to send the api key from your user.
+Verify a key from your users. You only need to send the api key from your user. Optionally, pass in a second param, a map with the key `apiId` which sends the `apiId` along.
 
 Returns a map with whether the key is valid or not. Optionally sends `ownerId` and `meta`.
 
 ```elixir
  UnkeyElixirSdk.verify_key("xyz_AS5HDkXXPot2MMoPHD8jnL")
+  # returns
+  %{"valid" => true,
+    "ownerId" => "chronark",
+    "meta" => %{
+      "hello" => "world"
+    }}
+```
+
+```elixir
+ UnkeyElixirSdk.verify_key("xyz_AS5HDkXXPot2MMoPHD8jnL", %{"apiId"=> "api_AS455efrefsfsf"})
   # returns
   %{"valid" => true,
     "ownerId" => "chronark",
@@ -144,16 +162,53 @@ UnkeyElixirSdk.update_key("key_cm9vdCBvZiBnb29kXa", %{
 :ok
 ```
 
-### revoke_key
+### update_remaining
 
-> @spec revoke_key(binary) :: :ok
+```elixir
+@type key_update() ::
+  %{
+    "keyId" => String.t(),
+    "op" => "increment" | "decrement" | "set",
+    "value" => integer() | nil
+  }
+```
+
+> @spec update_remaining(key_update()) :: :ok
+
+Updates the `remaining` value for a specified key.
+Takes in a map of the shape:
+`%{
+"keyId": "key_123",
+"op": "increment",
+"value": 1
+}`
+
+Where "op" is "increment" | "decrement" | "set"
+and value is the value you want to increase by or nil (unlimited)
+
+Returns a map with the updated "remaining" value.
+
+```elixir
+UnkeyElixirSdk.update_remaining(%{
+"keyId": "key_123",
+"op": "increment",
+"value": 1
+})
+
+ %{remaining: 100}
+
+```
+
+### delete_key
+
+> @spec delete_key(binary) :: :ok
 
 Delete an api key for your users
 
 Returns `:ok`
 
 ```elixir
-UnkeyElixirSdk.revoke_key("key_cm9vdCBvZiBnb29kXa")
+UnkeyElixirSdk.delete_key("key_cm9vdCBvZiBnb29kXa")
 # returns
 :ok
 ```

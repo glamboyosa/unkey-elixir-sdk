@@ -17,7 +17,7 @@ defmodule UnkeyElixirSdkTest do
 
     version = mix_config[:version]
 
-    assert version == "0.1.2"
+    assert version == "0.2.0"
 
     assert readme_md =~ ~s({:unkey_elixir_sdk, "~> #{version}"})
   end
@@ -83,6 +83,22 @@ defmodule UnkeyElixirSdkTest do
         assert is_map(opts)
 
         assert opts = UnkeyElixirSdk.verify_key(opts["key"])
+
+        assert is_map(opts)
+        assert opts["valid"] == true
+      catch
+        err ->
+          Logger.error(err)
+      end
+    end
+
+    test "verify_key/2", %{api_id: api_id} do
+      try do
+        opts = UnkeyElixirSdk.create_key(%{"apiId" => api_id})
+
+        assert is_map(opts)
+
+        assert opts = UnkeyElixirSdk.verify_key(opts["key"], %{"apiId" => api_id})
 
         assert is_map(opts)
         assert opts["valid"] == true
@@ -158,13 +174,27 @@ defmodule UnkeyElixirSdkTest do
       end
     end
 
-    test "revoke_key/1", %{api_id: api_id} do
+    test "delete_key/1", %{api_id: api_id} do
       try do
         opts = UnkeyElixirSdk.create_key(%{"apiId" => api_id})
 
         assert is_map(opts)
 
-        assert :ok = UnkeyElixirSdk.revoke_key(opts["keyId"])
+        assert :ok = UnkeyElixirSdk.delete_key(opts["keyId"])
+      catch
+        err ->
+          Logger.error(err)
+      end
+    end
+    test "update_remaining/1", %{api_id: api_id} do
+      try do
+        opts = UnkeyElixirSdk.create_key(%{"apiId" => api_id, "remaining" => 2})
+
+        assert is_map(opts)
+
+        assert opts = UnkeyElixirSdk.update_remaining(%{"keyId" => opts["keyId"],"op" => "increment", "value" => 100 })
+        assert is_map(opts)
+        assert is_integer(opts["remaining"])
       catch
         err ->
           Logger.error(err)

@@ -83,7 +83,7 @@ defmodule UnkeyElixirSdk do
   end
 
   @doc """
-  Verify a key from your users.  You only need to send the api key from your user.
+  Verify a key from your users.  You only need to send the api key from your user. Optionally, second param is a map with the key `apiId` which sends the apiId
 
   Returns a map with whether the key is valid or not. Optionally sends `ownerId` and `meta`
 
@@ -95,12 +95,20 @@ defmodule UnkeyElixirSdk do
       "meta" => %{
       "hello" => "world"
       }}`
+
+      iex> UnkeyElixirSdk.verify_key("xyz_AS5HDkXXPot2MMoPHD8jnL", %{"apiId"} => "api_sASDSsgeegd")
+
+      `%{"valid" => true,
+       "ownerId" => "chronark",
+      "meta" => %{
+      "hello" => "world"
+      }}`
   """
 
-  @spec verify_key(binary) :: map()
-  def verify_key(key) when is_binary(key) do
+  @spec verify_key(binary, map()) :: map()
+  def verify_key(key, opts \\ %{}) when is_binary(key) do
     [{_m, pid}] = :ets.lookup(:pid_store, "pid")
-    GenServer.call(pid, {:verify_key, key}, :infinity)
+    GenServer.call(pid, {:verify_key, key, opts}, :infinity)
   end
 
   @doc """
@@ -109,16 +117,44 @@ defmodule UnkeyElixirSdk do
   Returns  :ok
 
   ## Examples
-      iex> UnkeyElixirSdk.revoke_key("key_cm9vdCBvZiBnb29kXa")
+      iex> UnkeyElixirSdk.delete_key("key_cm9vdCBvZiBnb29kXa")
 
       :ok
   """
 
-  @spec revoke_key(binary) :: :ok
-  def revoke_key(key) when is_binary(key) do
+  @spec delete_key(binary) :: :ok
+  def delete_key(key) when is_binary(key) do
     [{_m, pid}] = :ets.lookup(:pid_store, "pid")
-    GenServer.call(pid, {:revoke_key, key}, :infinity)
+    GenServer.call(pid, {:delete_key, key}, :infinity)
   end
+
+  @doc """
+Updates the `remaining` value for a specified key.
+  Takes in a map of the shape:
+  %{
+  "keyId": "key_123",
+  "op": "increment",
+  "value": 1
+}
+Where "op" is "increment" | "decrement" | "set"
+and value is the value you want to increase by or nil (unlimited)
+
+ Returns a map with the updated "remaining" value.
+
+  ## Examples
+      iex> UnkeyElixirSdk.update_remaining(%{
+  "keyId": "key_123",
+  "op": "increment",
+  "value": 1
+})
+
+      %{remaining: 100}
+  """
+@spec update_remaining(map()) :: :ok
+def update_remaining(opts) when is_map(opts) do
+  [{_m, pid}] = :ets.lookup(:pid_store, "pid")
+  GenServer.call(pid, {:update_remaining, opts}, :infinity)
+end
 
   @doc """
   Updates the configuration of a key
@@ -181,14 +217,14 @@ defmodule UnkeyElixirSdk do
   def init(elements) do
     case Map.get(elements, :base_url) do
       nil ->
-        base_url = "https://api.unkey.dev/v1/keys"
+        base_url = "https://api.unkey.dev/v1/keys."
 
         elements = Map.put(elements, :base_url, base_url)
 
         {:ok, elements}
 
       _ ->
-        base_url = "https://api.unkey.dev/v1/keys"
+        base_url = "https://api.unkey.dev/v1/keys."
 
         elements = Map.put_new(elements, :base_url, base_url)
 
@@ -200,7 +236,7 @@ defmodule UnkeyElixirSdk do
   def handle_call({:create_key, opts}, _from, state) do
     body = opts |> Jason.encode!()
 
-    case HTTPoison.post(state.base_url, body, headers(state.token)) do
+    case HTTPoison.post("#{state.base_url}createKey", body, headers(state.token)) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         {:reply, Map.new(Jason.decode!(body)), state}
 
@@ -223,8 +259,37 @@ defmodule UnkeyElixirSdk do
   end
 
   @impl true
-  def handle_call({:revoke_key, key_id}, _from, state) do
-    case HTTPoison.delete("#{state.base_url}/#{key_id}", headers(state.token)) do
+  def handle_call({:update_remaining, opts}, _from, state) do
+    validate_params(opts)
+    body = opts |> Jason.encode!()
+
+    case HTTPoison.post("#{state.base_url}updateRemaining", body, headers(state.token)) do
+      {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
+        {:reply, Map.new(Jason.decode!(body)), state}
+
+      {:ok, %HTTPoison.Response{status_code: 404}} ->
+        handle_error("Not found :(")
+
+      {:ok, %HTTPoison.Response{status_code: 401}} ->
+        handle_error("Unauthorised")
+
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        IO.inspect(reason)
+        handle_error(to_string(reason))
+
+      {:ok, %HTTPoison.Response{body: body}} ->
+        handle_error(to_string(body))
+
+      _ ->
+        handle_error(to_string("Something went wrong"))
+    end
+  end
+
+  @impl true
+  def handle_call({:delete_key, key_id}, _from, state) do
+    body = %{"keyId" => key_id} |> Jason.encode!()
+
+    case HTTPoison.post("#{state.base_url}deleteKey", body, headers(state.token)) do
       {:ok, %HTTPoison.Response{status_code: 200}} ->
         {:reply, :ok, state}
 
@@ -250,6 +315,7 @@ defmodule UnkeyElixirSdk do
   def handle_call({:update_key, key_id, opts}, _from, state) do
     body =
       %{
+        "keyId" => key_id,
         "name" => :undefined,
         "ownerId" => :undefined,
         "meta" => :undefined,
@@ -261,7 +327,7 @@ defmodule UnkeyElixirSdk do
       |> Map.filter(&(elem(&1, 1) !== :undefined))
       |> Jason.encode!()
 
-    case HTTPoison.put("#{state.base_url}/#{key_id}", body, headers(state.token)) do
+    case HTTPoison.post("#{state.base_url}updateKey", body, headers(state.token)) do
       {:ok, %HTTPoison.Response{status_code: 200}} ->
         {:reply, :ok, state}
 
@@ -284,12 +350,13 @@ defmodule UnkeyElixirSdk do
   end
 
   @impl true
-  def handle_call({:verify_key, key}, _from, state) do
+  def handle_call({:verify_key, key, opts}, _from, state) do
     body =
       %{"key" => key}
+      |> Map.merge(opts)
       |> Jason.encode!()
 
-    case HTTPoison.post("#{state.base_url}/verify", body, headers(state.token)) do
+    case HTTPoison.post("#{state.base_url}verifyKey", body, headers(state.token)) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         {:reply, Jason.decode!(body), state}
 
@@ -326,5 +393,19 @@ defmodule UnkeyElixirSdk do
 
   defp headers(token) do
     [{"Authorization", "Bearer #{token}"}, {"Content-Type", "application/json; charset=UTF-8"}]
+  end
+  defp validate_params(params) do
+    # Runtime checks to ensure op is valid and value is a number or nil
+    valid_ops = ~w(increment decrement set)a
+    op = String.to_atom(params["op"])
+
+    if !Enum.member?(valid_ops, op) do
+      raise ArgumentError, "Invalid operation '#{op}', expected one of: #{inspect(valid_ops)}"
+    end
+
+    value = params["value"]
+    unless is_nil(value) || is_integer(value) do
+      raise ArgumentError, "Invalid value '#{value}', expected an integer or nil"
+    end
   end
 end
