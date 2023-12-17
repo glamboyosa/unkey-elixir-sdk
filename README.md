@@ -93,7 +93,7 @@ UnkeyElixirSdk.create_key(%{
 
 ### verify_key
 
-> @spec verify_key(binary) :: map()
+> @spec verify_key(binary, map()) :: map()
 
 Verify a key from your users. You only need to send the api key from your user. Optionally, pass in a second param, a map with the key `apiId` which sends the `apiId` along.
 
