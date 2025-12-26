@@ -4,7 +4,7 @@ defmodule UnkeyElixirSdk.MixProject do
   def project do
     [
       app: :unkey_elixir_sdk,
-      version: "0.2.0",
+      version: "0.3.0",
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
       deps: deps(),

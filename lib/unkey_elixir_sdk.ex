@@ -215,21 +215,11 @@ end
 
   @impl true
   def init(elements) do
-    case Map.get(elements, :base_url) do
-      nil ->
-        base_url = "https://api.unkey.dev/v1/keys."
-
-        elements = Map.put(elements, :base_url, base_url)
-
-        {:ok, elements}
-
-      _ ->
-        base_url = "https://api.unkey.dev/v1/keys."
-
-        elements = Map.put_new(elements, :base_url, base_url)
-
-        {:ok, elements}
-    end
+    # v2 API uses https://api.unkey.com/v2/keys. format
+    # See: https://www.unkey.com/docs/api-reference/v2/rpc
+    base_url = "https://api.unkey.com/v2/keys."
+    elements = Map.put(elements, :base_url, base_url)
+    {:ok, elements}
   end
 
   @impl true
@@ -238,7 +228,9 @@ end
 
     case HTTPoison.post("#{state.base_url}createKey", body, headers(state.token)) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
-        {:reply, Map.new(Jason.decode!(body)), state}
+        # v2 API wraps response in {meta, data} - extract data for backward compatibility
+        response = Jason.decode!(body)
+        {:reply, extract_data(response), state}
 
       {:ok, %HTTPoison.Response{status_code: 404}} ->
         handle_error("Not found :(")
@@ -265,7 +257,9 @@ end
 
     case HTTPoison.post("#{state.base_url}updateRemaining", body, headers(state.token)) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
-        {:reply, Map.new(Jason.decode!(body)), state}
+        # v2 API wraps response in {meta, data} - extract data for backward compatibility
+        response = Jason.decode!(body)
+        {:reply, extract_data(response), state}
 
       {:ok, %HTTPoison.Response{status_code: 404}} ->
         handle_error("Not found :(")
@@ -358,7 +352,9 @@ end
 
     case HTTPoison.post("#{state.base_url}verifyKey", body, headers(state.token)) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
-        {:reply, Jason.decode!(body), state}
+        # v2 API wraps response in {meta, data} - extract data for backward compatibility
+        response = Jason.decode!(body)
+        {:reply, extract_data(response), state}
 
       {:ok, %HTTPoison.Response{status_code: 404}} ->
         handle_error("Not found :(")
@@ -377,6 +373,11 @@ end
         handle_error(to_string("Something went wrong"))
     end
   end
+
+  # v2 API wraps responses in {meta, data} structure
+  # Extract the data field for backward compatibility, or return as-is for v1-style responses
+  defp extract_data(%{"data" => data}) when is_map(data), do: data
+  defp extract_data(response), do: response
 
   defp handle_error(error_message) when is_binary(error_message) do
     try do

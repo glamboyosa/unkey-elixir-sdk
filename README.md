@@ -11,7 +11,7 @@ The package can be installed from Hex PM by adding `unkey_elixir_sdk` to your li
 ```elixir
 def deps do
   [
-    {:unkey_elixir_sdk, "~> 0.2.0"}
+    {:unkey_elixir_sdk, "~> 0.3.0"}
   ]
 end
 ```
@@ -46,6 +46,21 @@ You can also call the `start_link` function instead.
 ```
 
 ## Breaking Changes
+
+### Version 0.3.0
+
+**Change**: Updated to use Unkey API v2 (`https://api.unkey.com/v2/`).
+
+The Unkey API v1 will be deprecated in January 2026. This version updates the SDK to use the v2 API.
+
+**Key changes in v2 API:**
+- New base URL: `https://api.unkey.com/v2/keys.{action}` (was `https://api.unkey.dev/v1/keys/{action}`)
+- Response format now includes `meta` and `data` wrapper fields (the SDK extracts `data` for backward compatibility)
+- Some request field names have changed in the API:
+  - `ownerId` → `externalId`
+  - Rate limit structure uses `duration` instead of `refillInterval`/`refillRate`
+
+See the [Unkey v2 Migration Guide](https://www.unkey.com/docs/api-reference/v1/migration) for full details.
 
 ### Version 0.2.0
 
