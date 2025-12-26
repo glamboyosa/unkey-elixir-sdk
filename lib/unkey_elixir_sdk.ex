@@ -1,12 +1,10 @@
 defmodule UnkeyElixirSdk do
-  use GenServer
-  require Logger
-  alias HTTPoison
-  alias Jason
-
   @moduledoc """
   Documentation for `UnkeyElixirSdk`.
   """
+  use GenServer
+
+  require Logger
 
   # Client
   @doc """
@@ -129,32 +127,32 @@ defmodule UnkeyElixirSdk do
   end
 
   @doc """
-Updates the `remaining` value for a specified key.
+  Updates the `remaining` value for a specified key.
   Takes in a map of the shape:
   %{
   "keyId": "key_123",
   "op": "increment",
   "value": 1
-}
-Where "op" is "increment" | "decrement" | "set"
-and value is the value you want to increase by or nil (unlimited)
+  }
+  Where "op" is "increment" | "decrement" | "set"
+  and value is the value you want to increase by or nil (unlimited)
 
- Returns a map with the updated "remaining" value.
+  Returns a map with the updated "remaining" value.
 
   ## Examples
       iex> UnkeyElixirSdk.update_remaining(%{
   "keyId": "key_123",
   "op": "increment",
   "value": 1
-})
+  })
 
       %{remaining: 100}
   """
-@spec update_remaining(map()) :: :ok
-def update_remaining(opts) when is_map(opts) do
-  [{_m, pid}] = :ets.lookup(:pid_store, "pid")
-  GenServer.call(pid, {:update_remaining, opts}, :infinity)
-end
+  @spec update_remaining(map()) :: :ok
+  def update_remaining(opts) when is_map(opts) do
+    [{_m, pid}] = :ets.lookup(:pid_store, "pid")
+    GenServer.call(pid, {:update_remaining, opts}, :infinity)
+  end
 
   @doc """
   Updates the configuration of a key
@@ -215,10 +213,11 @@ end
 
   @impl true
   def init(elements) do
-    # v2 API uses https://api.unkey.com/v2/keys. format
+    # Use user-provided base_url if present, otherwise default to v2 API
+    # v2 API: https://api.unkey.com/v2/keys.{action}
     # See: https://www.unkey.com/docs/api-reference/v2/rpc
-    base_url = "https://api.unkey.com/v2/keys."
-    elements = Map.put(elements, :base_url, base_url)
+    default_base_url = "https://api.unkey.com/v2/keys."
+    elements = Map.put_new(elements, :base_url, default_base_url)
     {:ok, elements}
   end
 
@@ -380,12 +379,10 @@ end
   defp extract_data(response), do: response
 
   defp handle_error(error_message) when is_binary(error_message) do
-    try do
-      throw(error_message)
-    catch
-      err ->
-        log_error("Error Message #{err}")
-    end
+    throw(error_message)
+  catch
+    err ->
+      log_error("Error Message #{err}")
   end
 
   defp log_error(input) when is_binary(input) do
@@ -395,6 +392,7 @@ end
   defp headers(token) do
     [{"Authorization", "Bearer #{token}"}, {"Content-Type", "application/json; charset=UTF-8"}]
   end
+
   defp validate_params(params) do
     # Runtime checks to ensure op is valid and value is a number or nil
     valid_ops = ~w(increment decrement set)a
@@ -405,7 +403,8 @@ end
     end
 
     value = params["value"]
-    unless is_nil(value) || is_integer(value) do
+
+    if !(is_nil(value) || is_integer(value)) do
       raise ArgumentError, "Invalid value '#{value}', expected an integer or nil"
     end
   end
