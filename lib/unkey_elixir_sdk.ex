@@ -25,9 +25,8 @@ defmodule UnkeyElixirSdk do
     :ets.new(:pid_store, [:set, :public, :named_table])
 
     if map_size(default) === 0 do
-      handle_error(
-        "You need to specify at least the token in either the supervisor or via the start_link function i.e. start_link(%{token: 'mytoken'})"
-      )
+      raise ArgumentError,
+            "You need to specify at least the token in either the supervisor or via the start_link function i.e. start_link(%{token: 'mytoken'})"
     end
 
     {:ok, pid} = GenServer.start_link(__MODULE__, default)
@@ -72,8 +71,9 @@ defmodule UnkeyElixirSdk do
 
   @spec create_key(map) :: map()
   def create_key(opts) when is_map(opts) do
-    if(is_nil(Map.get(opts, "apiId"))) do
-      handle_error("You need to specify at least the apiId in the form %{apiId: 'yourapiId'}")
+    if is_nil(Map.get(opts, "apiId")) do
+      raise ArgumentError,
+            "You need to specify at least the apiId in the form %{apiId: 'yourapiId'}"
     end
 
     [{_m, pid}] = :ets.lookup(:pid_store, "pid")
@@ -232,20 +232,19 @@ defmodule UnkeyElixirSdk do
         {:reply, extract_data(response), state}
 
       {:ok, %HTTPoison.Response{status_code: 404}} ->
-        handle_error("Not found :(")
+        handle_error("Not found :(", state)
 
       {:ok, %HTTPoison.Response{status_code: 401}} ->
-        handle_error("Unauthorised")
+        handle_error("Unauthorised", state)
 
       {:error, %HTTPoison.Error{reason: reason}} ->
-        IO.inspect(reason)
-        handle_error(to_string(reason))
+        handle_error(to_string(reason), state)
 
       {:ok, %HTTPoison.Response{body: body}} ->
-        handle_error(to_string(body))
+        handle_error(to_string(body), state)
 
       _ ->
-        handle_error(to_string("Something went wrong"))
+        handle_error("Something went wrong", state)
     end
   end
 
@@ -261,20 +260,19 @@ defmodule UnkeyElixirSdk do
         {:reply, extract_data(response), state}
 
       {:ok, %HTTPoison.Response{status_code: 404}} ->
-        handle_error("Not found :(")
+        handle_error("Not found :(", state)
 
       {:ok, %HTTPoison.Response{status_code: 401}} ->
-        handle_error("Unauthorised")
+        handle_error("Unauthorised", state)
 
       {:error, %HTTPoison.Error{reason: reason}} ->
-        IO.inspect(reason)
-        handle_error(to_string(reason))
+        handle_error(to_string(reason), state)
 
       {:ok, %HTTPoison.Response{body: body}} ->
-        handle_error(to_string(body))
+        handle_error(to_string(body), state)
 
       _ ->
-        handle_error(to_string("Something went wrong"))
+        handle_error("Something went wrong", state)
     end
   end
 
@@ -287,20 +285,19 @@ defmodule UnkeyElixirSdk do
         {:reply, :ok, state}
 
       {:ok, %HTTPoison.Response{status_code: 404}} ->
-        handle_error("Not found :(")
+        handle_error("Not found :(", state)
 
       {:ok, %HTTPoison.Response{status_code: 401}} ->
-        handle_error("Unauthorised")
+        handle_error("Unauthorised", state)
 
       {:error, %HTTPoison.Error{reason: reason}} ->
-        IO.inspect(reason)
-        handle_error(to_string(reason))
+        handle_error(to_string(reason), state)
 
       {:ok, %HTTPoison.Response{body: body}} ->
-        handle_error(to_string(body))
+        handle_error(to_string(body), state)
 
       _ ->
-        handle_error(to_string("Something went wrong"))
+        handle_error("Something went wrong", state)
     end
   end
 
@@ -325,20 +322,19 @@ defmodule UnkeyElixirSdk do
         {:reply, :ok, state}
 
       {:ok, %HTTPoison.Response{status_code: 404}} ->
-        handle_error("Not found :(")
+        handle_error("Not found :(", state)
 
       {:ok, %HTTPoison.Response{status_code: 401}} ->
-        handle_error("Unauthorised")
+        handle_error("Unauthorised", state)
 
       {:error, %HTTPoison.Error{reason: reason}} ->
-        IO.inspect(reason)
-        handle_error(to_string(reason))
+        handle_error(to_string(reason), state)
 
       {:ok, %HTTPoison.Response{body: body}} ->
-        handle_error(to_string(body))
+        handle_error(to_string(body), state)
 
       _ ->
-        handle_error(to_string("Something went wrong"))
+        handle_error("Something went wrong", state)
     end
   end
 
@@ -356,20 +352,19 @@ defmodule UnkeyElixirSdk do
         {:reply, extract_data(response), state}
 
       {:ok, %HTTPoison.Response{status_code: 404}} ->
-        handle_error("Not found :(")
+        handle_error("Not found :(", state)
 
       {:ok, %HTTPoison.Response{status_code: 401}} ->
-        handle_error("Unauthorised")
+        handle_error("Unauthorised", state)
 
       {:error, %HTTPoison.Error{reason: reason}} ->
-        IO.inspect(reason)
-        handle_error(to_string(reason))
+        handle_error(to_string(reason), state)
 
       {:ok, %HTTPoison.Response{body: body}} ->
-        handle_error(to_string(body))
+        handle_error(to_string(body), state)
 
       _ ->
-        handle_error(to_string("Something went wrong"))
+        handle_error("Something went wrong", state)
     end
   end
 
@@ -378,15 +373,9 @@ defmodule UnkeyElixirSdk do
   defp extract_data(%{"data" => data}) when is_map(data), do: data
   defp extract_data(response), do: response
 
-  defp handle_error(error_message) when is_binary(error_message) do
-    throw(error_message)
-  catch
-    err ->
-      log_error("Error Message #{err}")
-  end
-
-  defp log_error(input) when is_binary(input) do
-    IO.puts(input)
+  defp handle_error(error_message, state) when is_binary(error_message) do
+    Logger.error("UnkeyElixirSdk: #{error_message}")
+    {:reply, {:error, error_message}, state}
   end
 
   defp headers(token) do
