@@ -223,4 +223,4 @@ Documentation can be found at [https://hexdocs.pm/unkey_elixir_sdk](https://hexd
 
 ## References
 
-- [Unkey.dev documentation](https://unkey.dev/docss)
+- [Unkey.dev documentation](https://unkey.dev/docs)

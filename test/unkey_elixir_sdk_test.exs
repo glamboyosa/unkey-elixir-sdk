@@ -17,7 +17,7 @@ defmodule UnkeyElixirSdkTest do
 
     version = mix_config[:version]
 
-    assert version == "0.2.0"
+    assert version == "0.3.0"
 
     assert readme_md =~ ~s({:unkey_elixir_sdk, "~> #{version}"})
   end
