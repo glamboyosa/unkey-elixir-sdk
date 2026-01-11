@@ -1,12 +1,10 @@
 defmodule UnkeyElixirSdk do
-  use GenServer
-  require Logger
-  alias HTTPoison
-  alias Jason
-
   @moduledoc """
   Documentation for `UnkeyElixirSdk`.
   """
+  use GenServer
+
+  require Logger
 
   # Client
   @doc """
@@ -27,9 +25,8 @@ defmodule UnkeyElixirSdk do
     :ets.new(:pid_store, [:set, :public, :named_table])
 
     if map_size(default) === 0 do
-      handle_error(
-        "You need to specify at least the token in either the supervisor or via the start_link function i.e. start_link(%{token: 'mytoken'})"
-      )
+      raise ArgumentError,
+            "You need to specify at least the token in either the supervisor or via the start_link function i.e. start_link(%{token: 'mytoken'})"
     end
 
     {:ok, pid} = GenServer.start_link(__MODULE__, default)
@@ -74,8 +71,9 @@ defmodule UnkeyElixirSdk do
 
   @spec create_key(map) :: map()
   def create_key(opts) when is_map(opts) do
-    if(is_nil(Map.get(opts, "apiId"))) do
-      handle_error("You need to specify at least the apiId in the form %{apiId: 'yourapiId'}")
+    if is_nil(Map.get(opts, "apiId")) do
+      raise ArgumentError,
+            "You need to specify at least the apiId in the form %{apiId: 'yourapiId'}"
     end
 
     [{_m, pid}] = :ets.lookup(:pid_store, "pid")
@@ -129,32 +127,32 @@ defmodule UnkeyElixirSdk do
   end
 
   @doc """
-Updates the `remaining` value for a specified key.
+  Updates the `remaining` value for a specified key.
   Takes in a map of the shape:
   %{
   "keyId": "key_123",
   "op": "increment",
   "value": 1
-}
-Where "op" is "increment" | "decrement" | "set"
-and value is the value you want to increase by or nil (unlimited)
+  }
+  Where "op" is "increment" | "decrement" | "set"
+  and value is the value you want to increase by or nil (unlimited)
 
- Returns a map with the updated "remaining" value.
+  Returns a map with the updated "remaining" value.
 
   ## Examples
       iex> UnkeyElixirSdk.update_remaining(%{
   "keyId": "key_123",
   "op": "increment",
   "value": 1
-})
+  })
 
       %{remaining: 100}
   """
-@spec update_remaining(map()) :: :ok
-def update_remaining(opts) when is_map(opts) do
-  [{_m, pid}] = :ets.lookup(:pid_store, "pid")
-  GenServer.call(pid, {:update_remaining, opts}, :infinity)
-end
+  @spec update_remaining(map()) :: :ok
+  def update_remaining(opts) when is_map(opts) do
+    [{_m, pid}] = :ets.lookup(:pid_store, "pid")
+    GenServer.call(pid, {:update_remaining, opts}, :infinity)
+  end
 
   @doc """
   Updates the configuration of a key
@@ -215,21 +213,12 @@ end
 
   @impl true
   def init(elements) do
-    case Map.get(elements, :base_url) do
-      nil ->
-        base_url = "https://api.unkey.dev/v1/keys."
-
-        elements = Map.put(elements, :base_url, base_url)
-
-        {:ok, elements}
-
-      _ ->
-        base_url = "https://api.unkey.dev/v1/keys."
-
-        elements = Map.put_new(elements, :base_url, base_url)
-
-        {:ok, elements}
-    end
+    # Use user-provided base_url if present, otherwise default to v2 API
+    # v2 API: https://api.unkey.com/v2/keys.{action}
+    # See: https://www.unkey.com/docs/api-reference/v2/rpc
+    default_base_url = "https://api.unkey.com/v2/keys."
+    elements = Map.put_new(elements, :base_url, default_base_url)
+    {:ok, elements}
   end
 
   @impl true
@@ -238,23 +227,24 @@ end
 
     case HTTPoison.post("#{state.base_url}createKey", body, headers(state.token)) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
-        {:reply, Map.new(Jason.decode!(body)), state}
+        # v2 API wraps response in {meta, data} - extract data for backward compatibility
+        response = Jason.decode!(body)
+        {:reply, extract_data(response), state}
 
       {:ok, %HTTPoison.Response{status_code: 404}} ->
-        handle_error("Not found :(")
+        handle_error("Not found :(", state)
 
       {:ok, %HTTPoison.Response{status_code: 401}} ->
-        handle_error("Unauthorised")
+        handle_error("Unauthorised", state)
 
       {:error, %HTTPoison.Error{reason: reason}} ->
-        IO.inspect(reason)
-        handle_error(to_string(reason))
+        handle_error(to_string(reason), state)
 
       {:ok, %HTTPoison.Response{body: body}} ->
-        handle_error(to_string(body))
+        handle_error(to_string(body), state)
 
       _ ->
-        handle_error(to_string("Something went wrong"))
+        handle_error("Something went wrong", state)
     end
   end
 
@@ -265,23 +255,24 @@ end
 
     case HTTPoison.post("#{state.base_url}updateRemaining", body, headers(state.token)) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
-        {:reply, Map.new(Jason.decode!(body)), state}
+        # v2 API wraps response in {meta, data} - extract data for backward compatibility
+        response = Jason.decode!(body)
+        {:reply, extract_data(response), state}
 
       {:ok, %HTTPoison.Response{status_code: 404}} ->
-        handle_error("Not found :(")
+        handle_error("Not found :(", state)
 
       {:ok, %HTTPoison.Response{status_code: 401}} ->
-        handle_error("Unauthorised")
+        handle_error("Unauthorised", state)
 
       {:error, %HTTPoison.Error{reason: reason}} ->
-        IO.inspect(reason)
-        handle_error(to_string(reason))
+        handle_error(to_string(reason), state)
 
       {:ok, %HTTPoison.Response{body: body}} ->
-        handle_error(to_string(body))
+        handle_error(to_string(body), state)
 
       _ ->
-        handle_error(to_string("Something went wrong"))
+        handle_error("Something went wrong", state)
     end
   end
 
@@ -294,20 +285,19 @@ end
         {:reply, :ok, state}
 
       {:ok, %HTTPoison.Response{status_code: 404}} ->
-        handle_error("Not found :(")
+        handle_error("Not found :(", state)
 
       {:ok, %HTTPoison.Response{status_code: 401}} ->
-        handle_error("Unauthorised")
+        handle_error("Unauthorised", state)
 
       {:error, %HTTPoison.Error{reason: reason}} ->
-        IO.inspect(reason)
-        handle_error(to_string(reason))
+        handle_error(to_string(reason), state)
 
       {:ok, %HTTPoison.Response{body: body}} ->
-        handle_error(to_string(body))
+        handle_error(to_string(body), state)
 
       _ ->
-        handle_error(to_string("Something went wrong"))
+        handle_error("Something went wrong", state)
     end
   end
 
@@ -332,20 +322,19 @@ end
         {:reply, :ok, state}
 
       {:ok, %HTTPoison.Response{status_code: 404}} ->
-        handle_error("Not found :(")
+        handle_error("Not found :(", state)
 
       {:ok, %HTTPoison.Response{status_code: 401}} ->
-        handle_error("Unauthorised")
+        handle_error("Unauthorised", state)
 
       {:error, %HTTPoison.Error{reason: reason}} ->
-        IO.inspect(reason)
-        handle_error(to_string(reason))
+        handle_error(to_string(reason), state)
 
       {:ok, %HTTPoison.Response{body: body}} ->
-        handle_error(to_string(body))
+        handle_error(to_string(body), state)
 
       _ ->
-        handle_error(to_string("Something went wrong"))
+        handle_error("Something went wrong", state)
     end
   end
 
@@ -358,42 +347,41 @@ end
 
     case HTTPoison.post("#{state.base_url}verifyKey", body, headers(state.token)) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
-        {:reply, Jason.decode!(body), state}
+        # v2 API wraps response in {meta, data} - extract data for backward compatibility
+        response = Jason.decode!(body)
+        {:reply, extract_data(response), state}
 
       {:ok, %HTTPoison.Response{status_code: 404}} ->
-        handle_error("Not found :(")
+        handle_error("Not found :(", state)
 
       {:ok, %HTTPoison.Response{status_code: 401}} ->
-        handle_error("Unauthorised")
+        handle_error("Unauthorised", state)
 
       {:error, %HTTPoison.Error{reason: reason}} ->
-        IO.inspect(reason)
-        handle_error(to_string(reason))
+        handle_error(to_string(reason), state)
 
       {:ok, %HTTPoison.Response{body: body}} ->
-        handle_error(to_string(body))
+        handle_error(to_string(body), state)
 
       _ ->
-        handle_error(to_string("Something went wrong"))
+        handle_error("Something went wrong", state)
     end
   end
 
-  defp handle_error(error_message) when is_binary(error_message) do
-    try do
-      throw(error_message)
-    catch
-      err ->
-        log_error("Error Message #{err}")
-    end
-  end
+  # v2 API wraps responses in {meta, data} structure
+  # Extract the data field for backward compatibility, or return as-is for v1-style responses
+  defp extract_data(%{"data" => data}) when is_map(data), do: data
+  defp extract_data(response), do: response
 
-  defp log_error(input) when is_binary(input) do
-    IO.puts(input)
+  defp handle_error(error_message, state) when is_binary(error_message) do
+    Logger.error("UnkeyElixirSdk: #{error_message}")
+    {:reply, {:error, error_message}, state}
   end
 
   defp headers(token) do
     [{"Authorization", "Bearer #{token}"}, {"Content-Type", "application/json; charset=UTF-8"}]
   end
+
   defp validate_params(params) do
     # Runtime checks to ensure op is valid and value is a number or nil
     valid_ops = ~w(increment decrement set)a
@@ -404,7 +392,8 @@ end
     end
 
     value = params["value"]
-    unless is_nil(value) || is_integer(value) do
+
+    if !(is_nil(value) || is_integer(value)) do
       raise ArgumentError, "Invalid value '#{value}', expected an integer or nil"
     end
   end
